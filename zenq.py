@@ -1,3 +1,4 @@
+#!/usr/bin/env python3.7
 import click
 import dotenv
 from github import Github
