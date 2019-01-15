@@ -12,12 +12,13 @@ dotenv.load_dotenv()
 ZENHUB_API_ROOT = 'https://api.zenhub.io'
 LIST_EPICS_URL = '/'.join((ZENHUB_API_ROOT, 'p1/repositories/{repo_id}/epics'))
 GET_EPIC_URL = '/'.join((LIST_EPICS_URL, '{epic_id}'))
-
+GET_BOARD_URL = '/'.join((ZENHUB_API_ROOT, 'p1/repositories/{repo_id}/board'))
 
 # Utilities
 
-LIST_EPICS_URL_FMT = LIST_EPICS_URL.format
+GET_BOARD_URL_FMT = GET_BOARD_URL.format
 GET_EPIC_URL_FMT = GET_EPIC_URL.format
+LIST_EPICS_URL_FMT = LIST_EPICS_URL.format
 
 def get_github_repository(ctx, repo_id):
     try:
@@ -45,6 +46,32 @@ def cli(ctx, github_api_token, zenhub_api_token):
 
 
 # Commands
+
+@cli.command()
+@click.option('-r', '--repo-id', envvar='ZENQ_REPO_ID')
+@click.pass_context
+def get_board(ctx, repo_id):
+    """Get details a repository project board"""
+    source_repository = get_github_repository(ctx, repo_id)
+
+    url = GET_BOARD_URL_FMT(repo_id=repo_id)
+    response = requests.get(url, headers=ctx.obj['zenhub_headers'])
+    if response.status_code == 200:
+        pipeline_rows = []
+        pipelines = response.json()['pipelines']
+        for pipeline in reversed(pipelines):
+            pipeline_estimate = sum(i['estimate']['value'] for i in filter(lambda i: 'estimate' in i, pipeline['issues']))
+            pipeline_rows.append([
+                pipeline['name'],
+                f'{pipeline_estimate} points',
+                f'{len(pipeline["issues"])} issues',
+            ])
+        pivoted_pipeline_rows = list(zip(*pipeline_rows[::-1]))
+        table = terminaltables.SingleTable(pivoted_pipeline_rows, title=source_repository.name)
+        click.echo(table.table)
+    else:
+        click.secho(f'There was an error retrieving your board:\n{response.content}')
+
 
 @cli.command()
 @click.option('-r', '--repo-id', envvar='ZENQ_REPO_ID')
