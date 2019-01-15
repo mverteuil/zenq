@@ -9,6 +9,8 @@ python = "^3.7"
 requests = "^2.21"
 click = "^7.0"
 pygithub = "^1.43"
+python-dotenv = "^0.10.1"
+terminaltables = "^3.1"
 
 [tool.poetry.dev-dependencies]
 
